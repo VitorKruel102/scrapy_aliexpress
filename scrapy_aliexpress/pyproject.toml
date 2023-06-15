@@ -8,6 +8,7 @@ packages = [{include = "scrapy_aliexpress"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
+scrapy = "^2.9.0"
 
 
 [build-system]
