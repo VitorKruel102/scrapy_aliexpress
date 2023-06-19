@@ -1,0 +1,21 @@
+==============================================
+
+        Como acessar o html pelo XPATH                
+
+==============================================
+
+O que é Xpath = É uma linguagem de consulta que ajuda
+                na navegação pelo HTML ou XML para 
+                realizar uma raspagem de dados no site.
+
+                Assim como as pastas no seu computador, 
+                os elementos pelos quais o XPath vai navegar
+                são hierarquizados usando barras ( / ) 
+                como separadores.
+
+
+    // -------> Indica que o que formos achar está em qualquer parte do documento.
+    *  -------> Expressão coringa, retorna qualquer marcador, desde que tenha a condição a seguir.
+    [@id=''] -> Retornar apenas as tags com atributo id igual.
+    / --------> Determina que o elemento seguinte está imediatamente dentro do outro;
+    

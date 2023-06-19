@@ -9,6 +9,9 @@ packages = [{include = "scrapy_aliexpress"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 scrapy = "^2.9.0"
+bs4 = "^0.0.1"
+driver = "^0.1.0"
+selenium = "^4.10.0"
 
 
 [build-system]
