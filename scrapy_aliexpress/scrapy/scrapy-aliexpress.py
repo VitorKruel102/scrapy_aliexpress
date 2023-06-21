@@ -1,59 +1,75 @@
 import scrapy
+import logging
+from pprint import pprint
+
 from bs4 import BeautifulSoup
 from time import sleep
-
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+
+
+# Desativa o log do Scrapy
+logging.getLogger('scrapy').setLevel(logging.WARNING)
+
+# Contador de produtos:
+quantidade_de_produtos_processados = 0
+
+def decorador_produtos(metodo):
+    """."""
+    def anuncio_produtos(self, html):
+        """."""
+        print('=' * 50)
+        print(' ' * 20, 'A-Z Express', ' ' * 19)
+        print('=' * 50)
+        print()
+        metodo(self, html)
+    return anuncio_produtos
+
+
+CATEGORIA = [
+    'https://pt.aliexpress.com/category/201001892/men-clothing.html?CatId=201001892&category_redirect=1&g=y&isCategoryBrowse=true&isFavorite=y&isrefine=y&sortType=total_tranpro_desc&spm=a2g0o.home.102.1.75ee1c91dMBDON&trafficChannel=ppc&page=',
+    'https://pt.aliexpress.com/category/201001900/women-clothing.html?CatId=201001900&category_redirect=1&g=y&isCategoryBrowse=true&isFavorite=y&isrefine=y&sortType=total_tranpro_desc&spm=a2g0o.home.101.1.229a1c91Vjcfys&trafficChannel=ppc&page=',
+    'https://pt.aliexpress.com/category/201000020/consumer-electronics.html?CatId=201000020&category_redirect=1&g=y&isCategoryBrowse=true&isFavorite=y&isrefine=y&sortType=total_tranpro_desc&spm=a2g0o.home.105.1.16ea1c91ePYWUn&trafficChannel=ppc&page='
+]
 
 
 class ProdutosAliExpressSpider(scrapy.Spider):
     """."""
     name = 'ProdutosAliExpress'
     start_urls  = [
-        f'https://pt.aliexpress.com/category/201001900/women-clothing.html?CatId=201001900&category_redirect=1&g=y&isCategoryBrowse=true&isrefine=y&page={pagina}&sortType=total_tranpro_desc&spm=a2g0o.home.101.1.2e581c91ueQTKU&trafficChannel=ppc'
+        f'{url}{pagina}'
         for pagina in range(1, 2)
+        for url in CATEGORIA
     ]
+
 
     def parse(self, response):
         PRODUTO_XPATH = response.xpath('//*[@id="card-list"]/a')
         for produto in PRODUTO_XPATH:
+            print()
+            print(response)
+            print()
+            print()
             URL_PRODUTO_XPAH = produto.css('a::attr(href)').get()
 
             yield self.parse_produto(URL_PRODUTO_XPAH)
 
-
+    
     def parse_produto(self, response):
         """."""
         chrome = self.acessa_chrome(response)
-        chrome.implicitly_wait(10) # gives an implicit wait for 20 seconds
         html_do_produto = self.retornar_html_do_produto(chrome)
-        sleep(20)
+        
         while True:
-            try: 
-                DESCRIACAO_DO_PRODUTO = html_do_produto.find('div', class_='product-title').get_text()
-                print(DESCRIACAO_DO_PRODUTO)
-                print()
-            except Exception as e: 
-                print('Erro')
-                try:
-                    DESCRIACAO_DO_PRODUTO = html_do_produto.find('h3', class_='titleBanner--title--1BJltZV').get_text()
-                    print(DESCRIACAO_DO_PRODUTO)
-                    print()
-                except:
-                    try:
-                        print('erro 2')
-                        DESCRIACAO_DO_PRODUTO = html_do_produto.find('div', class_='title--wrap--Ms9Zv4A').get_text()
-                        print(DESCRIACAO_DO_PRODUTO)
-                        print()
-                    except:
-                        print('erro 3')
-                        sleep(1110000000)
-                break
+            DESCRICAO_PRODUTO = self.retorna_descricao_do_produto(html_do_produto)
+            QUANTIDADE_VENDIDA = self.retorna_quantidade_de_produtos_vendidos(html_do_produto)
+            PRECO_ANTIGO = self.retorna_preco_antigo_do_produto(html_do_produto)
+            print()
             break
 
         chrome.close()
-        sleep(5)
+        sleep(2)
 
 
     def acessa_chrome(self, url):
@@ -71,12 +87,61 @@ class ProdutosAliExpressSpider(scrapy.Spider):
             div_main = chrome.find_element(By.CLASS_NAME, 'product-main')
 
         html_content = div_main.get_attribute('outerHTML')
-        return BeautifulSoup(html_content, 'html.parser') 
+        html_parser = BeautifulSoup(html_content, 'html.parser')
+        return html_parser
 
 
+    @decorador_produtos
+    def retorna_descricao_do_produto(self, html_do_produto):
+        """."""
+        global quantidade_de_produtos_processados
+        quantidade_de_produtos_processados += 1
+        print('Quantidade de Itens processados:', quantidade_de_produtos_processados, sep=' ', end='\n')
+
+        try: 
+            DESCRIACAO_DO_PRODUTO = html_do_produto.find('div', class_='product-title').get_text()
+            print(f'{DESCRIACAO_DO_PRODUTO=}')
+            return DESCRIACAO_DO_PRODUTO
+        except Exception as e: 
+            try:
+                DESCRIACAO_DO_PRODUTO = html_do_produto.find('h3', class_='titleBanner--title--1BJltZV').get_text()
+                print(f'{DESCRIACAO_DO_PRODUTO=}')
+                return DESCRIACAO_DO_PRODUTO
+            except Exception as e:
+                DESCRIACAO_DO_PRODUTO = html_do_produto.find('div', class_='title--wrap--Ms9Zv4A').get_text()
+                print(f'{DESCRIACAO_DO_PRODUTO=}')
+                return DESCRIACAO_DO_PRODUTO
+
+            
+
+    def retorna_quantidade_de_produtos_vendidos(self, html_do_produto):
+        """."""
+        try: 
+            QUANTIDADE_VENDIDA = html_do_produto.find('span', class_='product-reviewer-sold').get_text()
+            print(f'{QUANTIDADE_VENDIDA=}')
+            return QUANTIDADE_VENDIDA
+        except Exception as e:
+            QUANTIDADE_VENDIDA = 0
+            print(f'{QUANTIDADE_VENDIDA=}')
+            return QUANTIDADE_VENDIDA
 
 
-
+    def retorna_preco_antigo_do_produto(self, html_do_produto):
+        """."""
+        try: 
+            PRECO_ANTIGO = html_do_produto.find('div', class_='product-price-del').get_text()
+            print(f'{PRECO_ANTIGO=}')
+            return PRECO_ANTIGO
+        except Exception as e:
+            try:
+                PRECO_ANTIGO = html_do_produto.find('span', class_='uniform-banner-box-discounts').get_text(strip=True)
+                PRECO_ANTIGO = f'{PRECO_ANTIGO.split(",")[0]},{PRECO_ANTIGO.split(",")[1][:2]}'
+                print(f'{PRECO_ANTIGO=}') 
+                return PRECO_ANTIGO  
+            except Exception as e:  
+                PRECO_ANTIGO = html_do_produto.find('span', class_='price--originalText--Zsc6sMv pdp-comp-price-original').get_text()
+                print(f'{PRECO_ANTIGO=}')
+                return PRECO_ANTIGO
 
 """
 
